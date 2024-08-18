@@ -532,6 +532,14 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} кто @"):
         await process_who(update, context)
         return
+    
+    if update.message.text is not None and update.message.text.lower() == f"{config.prefix.lower()} инфа":
+        if is_admin(update.message.from_user.id):  
+            await update.message.reply_text(
+                f"ID: <code>{update.message.chat_id}</code>",
+                parse_mode=ParseMode.HTML
+            )
+        return
 
     current_model = db.get_user_attribute(user_id, "current_model")
 
