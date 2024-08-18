@@ -23,6 +23,12 @@ image_size = config_yaml.get("image_size", "512x512")
 n_chat_modes_per_page = config_yaml.get("n_chat_modes_per_page", 5)
 mongodb_uri = f"mongodb://mongo:{config_env['MONGODB_PORT']}"
 
+prefix = config_yaml["prefix"]
+allow_private = config_yaml["allow_private"]
+rate_api_key = config_yaml["rate_api_key"]
+herbal_id = config_yaml["herbal_id"]
+admins = config_yaml["admins"]
+
 # chat_modes
 with open(config_dir / "chat_modes.yml", 'r') as f:
     chat_modes = yaml.safe_load(f)

@@ -6,6 +6,23 @@ import html
 import json
 from datetime import datetime
 import openai
+import re
+import requests
+import sys
+import random
+from typing import Tuple
+from words import NOUNS, ADJECTIVES, HERBAL, GOOD_ADJECTIVES, BAD_ADJECTIVES
+
+try:
+    if sys.version_info >= (3, 11):
+        from typing import LiteralString
+    else:
+        from typing_extensions import LiteralString
+except ImportError as e:
+    print(
+        "Cannot import LiteralString. Please update your python version to an actual."
+    )
+    raise e
 
 import telegram
 from telegram import (
@@ -39,6 +56,17 @@ logger = logging.getLogger(__name__)
 
 user_semaphores = {}
 user_tasks = {}
+
+token_forms = ("токен", "токенов", "токена")
+dollar_forms = ("доллар", "долларов", "доллара")
+ruble_forms = ("рубль", "рублей", "рубля")
+
+RATE_API_KEY = config.rate_api_key
+RATE_URL = f'https://api.currencybeacon.com/v1/latest?api_key={RATE_API_KEY}'
+
+GOD = True
+BIK = True
+KLUKVA = True
 
 HELP_MESSAGE = """Commands:
 ⚪ /retry – Regenerate last bot answer
@@ -115,9 +143,15 @@ async def is_bot_mentioned(update: Update, context: CallbackContext):
          message = update.message
 
          if message.chat.type == "private":
-             return True
+             if config.allow_private:
+                return True
+             else:
+                 return False
 
          if message.text is not None and ("@" + context.bot.username) in message.text:
+             return True
+         
+         if message.text is not None and config.prefix.lower() in message.text.lower():
              return True
 
          if message.reply_to_message is not None:
@@ -136,7 +170,7 @@ async def start_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     db.start_new_dialog(user_id)
 
-    reply_text = "Hi! I'm <b>ChatGPT</b> bot implemented with OpenAI API 🤖\n\n"
+    reply_text = f"Привет! Меня зовут <b>{config.prefix}</b> и я тут для того, чтобы помогать вам! 🤖\n\n"
     reply_text += HELP_MESSAGE
 
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
@@ -198,7 +232,7 @@ async def _vision_message_handle_fn(
     if use_new_dialog_timeout:
         if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
             db.start_new_dialog(user_id)
-            await update.message.reply_text(f"Starting new dialog due to timeout (<b>{config.chat_modes[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
+           # await update.message.reply_text(f"Starting new dialog due to timeout (<b>{config.chat_modes[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     buf = None
@@ -329,12 +363,70 @@ async def _vision_message_handle_fn(
         return
 
 async def unsupport_message_handle(update: Update, context: CallbackContext, message=None):
-    error_text = f"I don't know how to read files or videos. Send the picture in normal mode (Quick Mode)."
+    error_text = f"Я не умею работать с файлами или видео :("
     logger.error(error_text)
     await update.message.reply_text(error_text)
     return
 
+async def process_who(update: Update, context: CallbackContext):
+    match = re.search(r'@(\S+)', update.message.text.lower())
+    if match:
+        user = match.group(0)
+        noun = random.choice(NOUNS)
+        adjective = random.choice(ADJECTIVES)
+
+        await update.message.reply_text(
+            f"{user} {noun} {adjective}",
+            parse_mode='HTML'
+        )
+
+async def ban_user(update: Update, context: CallbackContext):
+    if is_admin(update.message.from_user.id):  
+        if update.message.reply_to_message:  
+            user_id = update.message.reply_to_message.from_user.id  
+            try:
+                await context.bot.ban_chat_member(update.message.chat.id, user_id)  
+                await update.message.reply_text(f"<b>📛 {user_id} был нахуй кикнут.</b>", parse_mode='HTML')  
+            except Exception as e:
+                await update.message.reply_text("<b>📛 Ты бля либо админа банишь, либо бота, либо я не ебу, но кикнуть его я не могу.</b>", parse_mode='HTML')
+                logging.error(f"Ошибка бана пользователя: {e}")
+        else:
+            await update.message.reply_text("<b>📛 Сука, на сообщение юзера ответь чтобы забанить.</b>", parse_mode='HTML')
+    else:
+        await update.message.reply_text("<b>📛 Ебанат, ты не админ.</b>", parse_mode='HTML')
+
 async def message_handle(update: Update, context: CallbackContext, message=None, use_new_dialog_timeout=True):
+    global GOD
+    global BIK
+    global KLUKVA
+
+    for herb in HERBAL:
+        if update.message.text is not None and herb in update.message.text.lower():
+            await notify_herbal(update, context)
+
+    if update.message.text is not None and "клюква" in update.message.text.lower():
+        if KLUKVA and BIK:
+            bad_adjective = random.choice(BAD_ADJECTIVES)
+            await update.message.reply_text(
+                f"он {bad_adjective}",
+                parse_mode=ParseMode.HTML
+            )
+
+    if update.message.text is not None and "пошел нахуй" in update.message.text.lower() or "пошёл назуй" in update.message.text.lower():
+        if BIK:
+            bad_adjective = random.choice(BAD_ADJECTIVES)
+            await update.message.reply_text(
+                f"сам пошел нахуй, {bad_adjective}",
+                parse_mode=ParseMode.HTML
+            )
+    elif update.message.text is not None and "нахуй" in update.message.text.lower():
+        if BIK:
+            bad_adjective = random.choice(BAD_ADJECTIVES)
+            await update.message.reply_text(
+                f"нахуй твоя жопа хороша, {bad_adjective}",
+                parse_mode=ParseMode.HTML
+            )
+
     # check if bot was mentioned (for group chats)
     if not await is_bot_mentioned(update, context):
         return
@@ -350,24 +442,108 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     if update.message.chat.type != "private":
         _message = _message.replace("@" + context.bot.username, "").strip()
 
+
     await register_user_if_not_exists(update, context, update.message.from_user)
     if await is_previous_message_not_answered_yet(update, context): return
 
     user_id = update.message.from_user.id
     chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
 
-    if chat_mode == "artist":
+    message = update.message
+
+    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} курс"):
+        await get_tokens_rate_handle(update, context)
+        return
+    
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит вохвалять хербала":
+        if not is_admin(message.from_user.id):
+            return
+        if GOD:
+            await update.message.reply_text(f"<b>Как говорят пацаны - Хербала к параше</b>", parse_mode=ParseMode.HTML)
+            GOD = False
+            return
+        else:
+            await update.message.reply_text(f"<b>Это чмо только его мамаша восхвалять может и то если он из дома</b>", parse_mode=ParseMode.HTML)
+            return
+    
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} вохвалять хербала":
+        if not is_admin(message.from_user.id):
+            return
+        if not GOD:
+            await update.message.reply_text(f"<b>Все в линейку построились и Хребалу сосать начали</b>", parse_mode=ParseMode.HTML)
+            GOD = True
+            return
+        else:
+            await update.message.reply_text(f"<b>Уровень восхваления Хербала повышен на 42%</b>", parse_mode=ParseMode.HTML)
+            return
+    
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит унижать клюкву":
+        if not is_admin(message.from_user.id):
+            return
+        if KLUKVA:
+            await update.message.reply_text(f"<b>клюква хороший клюква хороший</b>", parse_mode=ParseMode.HTML)
+            KLUKVA = False
+            return
+        else:
+            await update.message.reply_text(f"<b>Я и не хотел унижать этого мальчика</b>", parse_mode=ParseMode.HTML)
+            return
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} унижать клюкву":
+        if not is_admin(message.from_user.id):
+            return
+        if not KLUKVA:
+            await update.message.reply_text(f"<b>УНИЧТОЖИТЬ ЕБАНОГО ПИТУХА КЛЮКВУ</b>", parse_mode=ParseMode.HTML)
+            KLUKVA = True
+            return
+        else:
+            await update.message.reply_text(f"<b>Да куда его больше то? Его уже жизнь унизила</b>", parse_mode=ParseMode.HTML)
+            return
+    
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит бычить":
+        if not is_admin(message.from_user.id):
+            return
+        if BIK:
+            await update.message.reply_text(f"<b>я хороший я хороший</b>", parse_mode=ParseMode.HTML)
+            BIK = False
+            return
+        else:
+            await update.message.reply_text(f"<b>Я и так хороший и не ругаюсь!</b>", parse_mode=ParseMode.HTML)
+            return
+    
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} бычить":
+        if not is_admin(message.from_user.id):
+            return
+        if not BIK:
+            await update.message.reply_text(f"<b>Твоя мама шлюха</b>", parse_mode=ParseMode.HTML)
+            BIK = True
+            return
+        else:
+            await update.message.reply_text(f"<b>Ты долбаеб? Не понятно что я и так бык?</b>", parse_mode=ParseMode.HTML)
+            return
+
+    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} нарисуй"):
+        message = message.text.replace(config.prefix.lower() + " ", "")
         await generate_image_handle(update, context, message=message)
+        return
+    
+    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} фас":
+        await ban_user(update, context)
+        return
+    
+    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} кто @"):
+        await process_who(update, context)
         return
 
     current_model = db.get_user_attribute(user_id, "current_model")
+
+
+
 
     async def message_handle_fn():
         # new dialog timeout
         if use_new_dialog_timeout:
             if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
                 db.start_new_dialog(user_id)
-                await update.message.reply_text(f"Starting new dialog due to timeout (<b>{config.chat_modes[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
+              #  await update.message.reply_text(f"Starting new dialog due to timeout (<b>{config.chat_modes[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
         db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
         # in case of CancelledError
@@ -381,7 +557,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
             await update.message.chat.send_action(action="typing")
 
             if _message is None or len(_message) == 0:
-                 await update.message.reply_text("🥲 You sent <b>empty message</b>. Please, try again!", parse_mode=ParseMode.HTML)
+                 await update.message.reply_text("🥲 Ты отправил(а) <b>пустое сообщение</b>. Попробуй еще раз!", parse_mode=ParseMode.HTML)
                  return
 
             dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
@@ -480,7 +656,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         try:
             await task
         except asyncio.CancelledError:
-            await update.message.reply_text("✅ Canceled", parse_mode=ParseMode.HTML)
+            await update.message.reply_text("✅ Отменено", parse_mode=ParseMode.HTML)
         else:
             pass
         finally:
@@ -493,19 +669,148 @@ async def is_previous_message_not_answered_yet(update: Update, context: Callback
 
     user_id = update.message.from_user.id
     if user_semaphores[user_id].locked():
-        text = "⏳ Please <b>wait</b> for a reply to the previous message\n"
-        text += "Or you can /cancel it"
-        await update.message.reply_text(text, reply_to_message_id=update.message.id, parse_mode=ParseMode.HTML)
+        #text = "⏳ Пожалуйста, дождитесь ответ на прошлое сообщение!\n"
+        #await update.message.reply_text(text, reply_to_message_id=update.message.id, parse_mode=ParseMode.HTML)
         return True
     else:
         return False
 
 
-async def voice_message_handle(update: Update, context: CallbackContext):
-    # check if bot was mentioned (for group chats)
-    if not await is_bot_mentioned(update, context):
-        return
+def inflect_with_num(
+    number: int, forms: Tuple[LiteralString, LiteralString, LiteralString]
+) -> str:
 
+    units = number % 10
+    tens = number % 100 - units
+    if tens == 10 or units >= 5 or units == 0:
+        needed_form = 1
+    elif units > 1:
+        needed_form = 2
+    else:
+        needed_form = 0
+    return forms[needed_form]
+
+
+def process_float(number: float):
+    str_number = str(number)
+    
+    integer_part, fractional_part = str_number.split('.')
+    
+    if int(fractional_part) == 0:
+        return int(integer_part)
+    else:
+        return int(fractional_part[0])
+
+
+def rates_keyboard(dollar, euro, ruble):
+    keyboard = []
+
+    dollar_word = inflect_with_num(process_float(dollar), dollar_forms)
+    ruble_word = inflect_with_num(process_float(ruble), ruble_forms)
+
+    keyboard.append([InlineKeyboardButton(f'🇺🇸 {dollar} {dollar_word}', callback_data=f"nothing")])
+    keyboard.append([InlineKeyboardButton(f'🇪🇺 {euro} евро', callback_data=f"nothing")])
+    keyboard.append([InlineKeyboardButton(f'🇷🇺 {ruble} {ruble_word}', callback_data=f"nothing")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    return reply_markup
+
+
+async def get_rate(number):
+    euro_rate = 0
+    ruble_rate = 0
+
+    dollars = int(number)/20
+
+    response = requests.get(RATE_URL)
+
+
+    if response.status_code != 200:
+        return ('<b>📛 Ошибка доступа к API</b>', rates_keyboard(dollar=0, euro=0, ruble=0))
+
+    response = response.json()
+
+    if 'rates' not in response:
+        return ('<b>📛 Ошибка ответа API</b>', rates_keyboard(dollar=0, euro=0, ruble=0))
+
+    if 'EUR' in response['rates']:
+        euro_rate = round(response['rates']['EUR'], 2)
+
+    if 'RUB' in response['rates']:
+        ruble_rate = round(response['rates']['RUB'], 2)
+
+
+    token_rub = round((0.05 * ruble_rate), 2)
+    token_eur = round((0.05 * euro_rate), 4)
+
+    token_word = inflect_with_num(number, token_forms)
+
+    text = f"<b>-- 1 доллар --</b>\n<i>🇪🇺 {euro_rate} евро\n🇷🇺 {ruble_rate} {inflect_with_num(process_float(ruble_rate), ruble_forms)}</i>\n\n<b>-- 1 токен --</b><i>\n🇺🇸 0.05 доллара\n🇪🇺 {token_eur} евро\n🇷🇺 {token_rub} {inflect_with_num(process_float(token_rub), ruble_forms)}</i>\n\n"
+
+    rates_text = f"<b>-- {number} {token_word} --</b>"
+
+    if number > 0:
+        text = text + rates_text
+
+    return (text, rates_keyboard(dollar=dollars, euro=round((dollars * euro_rate), 2), ruble=round((dollars * ruble_rate), 2)))
+
+
+async def notify_herbal(update: Update, context: CallbackContext):
+    await context.bot.send_message(
+        config.herbal_id,
+        f"<b>Тебя упомянул @{update.message.from_user.username} | {update.message.from_user.full_name}</b>\nСсылка на сообщение/{update.message.message_id}\n\nТекст:\n<code>{update.message.text}</code>",
+        parse_mode=ParseMode.HTML
+    )
+
+    if GOD:
+        herbal = random.choice(HERBAL)
+        good_adjective = random.choice(GOOD_ADJECTIVES)
+        await update.message.reply_text(
+            f"😇 ну {herbal} самый {good_adjective}"
+        )
+
+async def get_tokens_rate_handle(update: Update, context: CallbackContext):
+    text = update.message.text.lower()
+    text = text.replace(config.prefix.lower() + " ", "")
+    match = re.match(r'курс\s+(\d+)', text)
+
+    if match:
+        number = match.group(1)
+        rate_text, reply_markup = await get_rate(int(number))
+        await update.message.reply_text(rate_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    else:
+        rate_text, reply_markup = await get_rate(0)
+        await update.message.reply_text(rate_text, parse_mode=ParseMode.HTML)
+
+
+async def video_note_message_handle(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    if await is_previous_message_not_answered_yet(update, context): return
+
+    user_id = update.message.from_user.id
+    db.set_user_attribute(user_id, "last_interaction", datetime.now())
+
+    video_note = update.message.video_note
+    video_note_file = await context.bot.get_file(video_note.file_id)
+    
+    # store file in memory, not on disk
+    buf = io.BytesIO()
+    await video_note_file.download_to_memory(buf)
+    buf.name = "video_note.mp4"  # file extension is required
+    buf.seek(0)  # move cursor to the beginning of the buffer
+
+    transcribed_text = await openai_utils.transcribe_audio(buf)
+    text = f"🎤: <i>{transcribed_text}</i>"
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+    # update n_transcribed_seconds
+    db.set_user_attribute(user_id, "n_transcribed_seconds", video_note.duration + db.get_user_attribute(user_id, "n_transcribed_seconds"))
+
+    await message_handle(update, context, message=transcribed_text)
+
+
+async def voice_message_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     if await is_previous_message_not_answered_yet(update, context): return
 
@@ -546,7 +851,7 @@ async def generate_image_handle(update: Update, context: CallbackContext, messag
         image_urls = await openai_utils.generate_images(message, n_images=config.return_n_generated_images, size=config.image_size)
     except openai.error.InvalidRequestError as e:
         if str(e).startswith("Your request was rejected as a result of our safety system"):
-            text = "🥲 Your request <b>doesn't comply</b> with OpenAI's usage policies.\nWhat did you write there, huh?"
+            text = "🥲 Я не могу говорить на такие темы"
             await update.message.reply_text(text, parse_mode=ParseMode.HTML)
             return
         else:
@@ -569,7 +874,7 @@ async def new_dialog_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "current_model", "gpt-3.5-turbo")
 
     db.start_new_dialog(user_id)
-    await update.message.reply_text("Starting new dialog ✅")
+    #await update.message.reply_text("Starting new dialog ✅")
 
     chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
     await update.message.reply_text(f"{config.chat_modes[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
@@ -585,7 +890,7 @@ async def cancel_handle(update: Update, context: CallbackContext):
         task = user_tasks[user_id]
         task.cancel()
     else:
-        await update.message.reply_text("<i>Nothing to cancel...</i>", parse_mode=ParseMode.HTML)
+        await update.message.reply_text("<i>Нечего отменять...</i>", parse_mode=ParseMode.HTML)
 
 
 def get_chat_mode_menu(page_index: int):
@@ -702,6 +1007,11 @@ def get_settings_menu(user_id: int):
 
     return text, reply_markup
 
+
+def is_admin(user_id: int):
+    if user_id in config.admins:
+        return True
+    return False
 
 async def settings_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
@@ -855,6 +1165,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("cancel", cancel_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.VOICE & user_filter, voice_message_handle))
+    application.add_handler(MessageHandler(filters.VIDEO_NOTE & user_filter, video_note_message_handle))
 
     application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(show_chat_modes_callback_handle, pattern="^show_chat_modes"))
