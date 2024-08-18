@@ -151,7 +151,7 @@ async def is_bot_mentioned(update: Update, context: CallbackContext):
          if message.text is not None and ("@" + context.bot.username) in message.text:
              return True
          
-         if message.text is not None and config.prefix.lower() in message.text.lower():
+         if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()}"):
              return True
 
          if message.reply_to_message is not None:
@@ -400,15 +400,18 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     global BIK
     global KLUKVA
 
+    if update.message.text is None:
+        return
+
     for herb in HERBAL:
         if update.message.text is not None and herb in update.message.text.lower():
             await notify_herbal(update, context)
 
-    if update.message.text is not None and "клюква" in update.message.text.lower():
+    if update.message.text is not None and "клюкв" in update.message.text.lower():
         if KLUKVA and BIK:
             bad_adjective = random.choice(BAD_ADJECTIVES)
             await update.message.reply_text(
-                f"он {bad_adjective}",
+                f"клюква {bad_adjective}",
                 parse_mode=ParseMode.HTML
             )
 
