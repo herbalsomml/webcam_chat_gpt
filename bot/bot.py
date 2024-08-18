@@ -365,7 +365,7 @@ async def _vision_message_handle_fn(
 async def unsupport_message_handle(update: Update, context: CallbackContext, message=None):
     error_text = f"Я не умею работать с файлами или видео :("
     logger.error(error_text)
-    await update.message.reply_text(error_text)
+    #await update.message.reply_text(error_text)
     return
 
 async def process_who(update: Update, context: CallbackContext):
