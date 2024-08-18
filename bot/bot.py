@@ -68,28 +68,24 @@ GOD = True
 BIK = True
 KLUKVA = True
 
-HELP_MESSAGE = """Commands:
-⚪ /retry – Regenerate last bot answer
-⚪ /new – Start new dialog
-⚪ /mode – Select chat mode
-⚪ /settings – Show settings
-⚪ /balance – Show balance
-⚪ /help – Show help
+HELP_MESSAGE =  f"""Привет, меня зовут {config.prefix.capitalize()}!
+Я твой помощник, базарю.
 
-🎨 Generate images from text prompts in <b>👩‍🎨 Artist</b> /mode
-👥 Add bot to <b>group chat</b>: /help_group_chat
-🎤 You can send <b>Voice Messages</b> instead of text
+Я могу отвечать на твои вопросы, просто напиши <b>'Игнат твой вопрос'</b>
+Я могу переводить твои кружки и голосовухи в текст
+Я умею рисовать, просто напиши <b>'Игнат нарисуй то что ты хочешь'</b>
+Я умею переводить токены в кэш
+Я знаю зеркала вебкам сайтов, напиши <b>'Игнат зеркала'</b>
 """
 
-HELP_GROUP_CHAT_MESSAGE = """You can add bot to any <b>group chat</b> to help and entertain its participants!
+HELP_GROUP_CHAT_MESSAGE = f"""Привет, меня зовут {config.prefix.capitalize()}!
+Я твой помощник, базарю.
 
-Instructions (see <b>video</b> below):
-1. Add the bot to the group chat
-2. Make it an <b>admin</b>, so that it can see messages (all other rights can be restricted)
-3. You're awesome!
-
-To get a reply from the bot in the chat – @ <b>tag</b> it or <b>reply</b> to its message.
-For example: "{bot_username} write a poem about Telegram"
+Я могу отвечать на твои вопросы, просто напиши <b>'Игнат твой вопрос'</b>
+Я могу переводить твои кружки и голосовухи в текст
+Я умею рисовать, просто напиши <b>'Игнат нарисуй то что ты хочешь'</b>
+Я умею переводить токены в кэш
+Я знаю зеркала вебкам сайтов, напиши <b>'Игнат зеркала'</b>
 """
 
 
@@ -458,6 +454,10 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         await get_tokens_rate_handle(update, context)
         return
     
+    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} зеркала"):
+        await get_webcam_mirrors(update, context)
+        return
+    
     if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит вохвалять хербала":
         if not is_admin(message.from_user.id):
             return
@@ -781,6 +781,32 @@ async def notify_herbal(update: Update, context: CallbackContext):
             f"😇 ну {herbal} самый {good_adjective}"
         )
 
+async def get_webcam_mirrors(update: Update, context: CallbackContext):
+    mirrors_text = f"""
+    <b>Чатур</b>
+    herbalsomml.chaturbate.com
+    webcamangels.com
+    webmodels.live
+    camvirt.com
+    chaturbate.wang
+    chaturbate.me
+    ru3.camru.top
+    chaturbate.global
+    privatecams.com
+    chaturbate.eu
+
+    <b>Бонга</b>
+    <i>Актуальное зерало всегда тут:</i>
+    zerkalorunetki.com
+
+    <b>Стрип</b>
+    mywebcamroom.com
+    ru.strip.chat
+    ru.stripchat.global
+    ru.superchat.live
+    """
+    await update.message.reply_text(mirrors_text, parse_mode=ParseMode.HTML)
+
 async def get_tokens_rate_handle(update: Update, context: CallbackContext):
     text = update.message.text.lower()
     text = text.replace(config.prefix.lower() + " ", "")
@@ -1068,7 +1094,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     n_generated_images = db.get_user_attribute(user_id, "n_generated_images")
     n_transcribed_seconds = db.get_user_attribute(user_id, "n_transcribed_seconds")
 
-    details_text = "🏷️ Details:\n"
+    details_text = "🏷️ Детали:\n"
     for model_key in sorted(n_used_tokens_dict.keys()):
         n_input_tokens, n_output_tokens = n_used_tokens_dict[model_key]["n_input_tokens"], n_used_tokens_dict[model_key]["n_output_tokens"]
         total_n_used_tokens += n_input_tokens + n_output_tokens
@@ -1077,7 +1103,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
         n_output_spent_dollars = config.models["info"][model_key]["price_per_1000_output_tokens"] * (n_output_tokens / 1000)
         total_n_spent_dollars += n_input_spent_dollars + n_output_spent_dollars
 
-        details_text += f"- {model_key}: <b>{n_input_spent_dollars + n_output_spent_dollars:.03f}$</b> / <b>{n_input_tokens + n_output_tokens} tokens</b>\n"
+        details_text += f"- {model_key}: <b>{n_input_spent_dollars + n_output_spent_dollars:.03f}$</b> / <b>{n_input_tokens + n_output_tokens} токенов</b>\n"
 
     # image generation
     image_generation_n_spent_dollars = config.models["info"]["dalle-2"]["price_per_1_image"] * n_generated_images
@@ -1089,13 +1115,13 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     # voice recognition
     voice_recognition_n_spent_dollars = config.models["info"]["whisper"]["price_per_1_min"] * (n_transcribed_seconds / 60)
     if n_transcribed_seconds != 0:
-        details_text += f"- Whisper (voice recognition): <b>{voice_recognition_n_spent_dollars:.03f}$</b> / <b>{n_transcribed_seconds:.01f} seconds</b>\n"
+        details_text += f"- Whisper (voice recognition): <b>{voice_recognition_n_spent_dollars:.03f}$</b> / <b>{n_transcribed_seconds:.01f} секунд</b>\n"
 
     total_n_spent_dollars += voice_recognition_n_spent_dollars
 
 
-    text = f"You spent <b>{total_n_spent_dollars:.03f}$</b>\n"
-    text += f"You used <b>{total_n_used_tokens}</b> tokens\n\n"
+    text = f"Потрачено <b>{total_n_spent_dollars:.03f}$</b>\n"
+    text += f"Использовано <b>{total_n_used_tokens}</b> токенов\n\n"
     text += details_text
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
@@ -1123,23 +1149,24 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
         )
 
         # split text into multiple messages due to 4096 character limit
-        for message_chunk in split_text_into_chunks(message, 4096):
-            try:
-                await context.bot.send_message(update.effective_chat.id, message_chunk, parse_mode=ParseMode.HTML)
-            except telegram.error.BadRequest:
-                # answer has invalid characters, so we send it without parse_mode
-                await context.bot.send_message(update.effective_chat.id, message_chunk)
+       # for message_chunk in split_text_into_chunks(message, 4096):
+        #    try:
+         #       await context.bot.send_message(update.effective_chat.id, message_chunk, parse_mode=ParseMode.HTML)
+          #  except telegram.error.BadRequest:
+           #     # answer has invalid characters, so we send it without parse_mode
+            #    await context.bot.send_message(update.effective_chat.id, message_chunk)
     except:
-        await context.bot.send_message(update.effective_chat.id, "Some error in error handler")
+        pass
+        #await context.bot.send_message(update.effective_chat.id, "Some error in error handler")
 
 async def post_init(application: Application):
     await application.bot.set_my_commands([
-        BotCommand("/new", "Start new dialog"),
-        BotCommand("/mode", "Select chat mode"),
-        BotCommand("/retry", "Re-generate response for previous query"),
-        BotCommand("/balance", "Show balance"),
-        BotCommand("/settings", "Show settings"),
-        BotCommand("/help", "Show help message"),
+        #BotCommand("/new", "Start new dialog"),
+        #BotCommand("/mode", "Select chat mode"),
+       # BotCommand("/retry", "Re-generate response for previous query"),
+        BotCommand("/balance", "Баланс"),
+       # BotCommand("/settings", "Show settings"),
+        BotCommand("/help", "Что я умею"),
     ])
 
 def run_bot() -> None:
@@ -1163,27 +1190,27 @@ def run_bot() -> None:
         group_ids = [x for x in any_ids if x < 0]
         user_filter = filters.User(username=usernames) | filters.User(user_id=user_ids) | filters.Chat(chat_id=group_ids)
 
-    application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
+   # application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
     application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
-    application.add_handler(CommandHandler("help_group_chat", help_group_chat_handle, filters=user_filter))
+   # application.add_handler(CommandHandler("help_group_chat", help_group_chat_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND & user_filter, message_handle))
-    application.add_handler(MessageHandler(filters.VIDEO & ~filters.COMMAND & user_filter, unsupport_message_handle))
-    application.add_handler(MessageHandler(filters.Document.ALL & ~filters.COMMAND & user_filter, unsupport_message_handle))
-    application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
-    application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
-    application.add_handler(CommandHandler("cancel", cancel_handle, filters=user_filter))
+   # application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND & user_filter, message_handle))
+   # application.add_handler(MessageHandler(filters.VIDEO & ~filters.COMMAND & user_filter, unsupport_message_handle))
+   # application.add_handler(MessageHandler(filters.Document.ALL & ~filters.COMMAND & user_filter, unsupport_message_handle))
+    #application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
+    #application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
+    #application.add_handler(CommandHandler("cancel", cancel_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.VOICE & user_filter, voice_message_handle))
     application.add_handler(MessageHandler(filters.VIDEO_NOTE & user_filter, video_note_message_handle))
 
-    application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
-    application.add_handler(CallbackQueryHandler(show_chat_modes_callback_handle, pattern="^show_chat_modes"))
-    application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
+    #application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
+   # application.add_handler(CallbackQueryHandler(show_chat_modes_callback_handle, pattern="^show_chat_modes"))
+   # application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
 
-    application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
-    application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
+   # application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
+   # application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
 
     application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
 
