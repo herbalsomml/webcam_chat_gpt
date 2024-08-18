@@ -411,7 +411,14 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 parse_mode=ParseMode.HTML
             )
 
-    if update.message.text is not None and "пошел нахуй" in update.message.text.lower() or "пошёл назуй" in update.message.text.lower():
+    if update.message.text is not None and "пошел нахуй" in update.message.text.lower():
+        if BIK:
+            bad_adjective = random.choice(BAD_ADJECTIVES)
+            await update.message.reply_text(
+                f"сам пошел нахуй, {bad_adjective}",
+                parse_mode=ParseMode.HTML
+            )
+    elif update.message.text is not None and "пошёл нахуй" in update.message.text.lower():
         if BIK:
             bad_adjective = random.choice(BAD_ADJECTIVES)
             await update.message.reply_text(
@@ -643,7 +650,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 text = "✍️ <i>Note:</i> Your current dialog is too long, so your <b>first message</b> was removed from the context.\n Send /new command to start new dialog"
             else:
                 text = f"✍️ <i>Note:</i> Your current dialog is too long, so <b>{n_first_dialog_messages_removed} first messages</b> were removed from the context.\n Send /new command to start new dialog"
-            await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+            #await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
     async with user_semaphores[user_id]:
         if current_model == "gpt-4-vision-preview" or current_model == "gpt-4o" or update.message.photo is not None and len(update.message.photo) > 0:
@@ -1205,12 +1212,12 @@ def run_bot() -> None:
     application.add_handler(MessageHandler(filters.VOICE & user_filter, voice_message_handle))
     application.add_handler(MessageHandler(filters.VIDEO_NOTE & user_filter, video_note_message_handle))
 
-    #application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
+   # application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
    # application.add_handler(CallbackQueryHandler(show_chat_modes_callback_handle, pattern="^show_chat_modes"))
    # application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
 
-   # application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
-   # application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
+    application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
+    application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
 
     application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
 
