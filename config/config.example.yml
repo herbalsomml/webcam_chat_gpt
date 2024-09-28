@@ -14,6 +14,7 @@ gpt_price_per_1000_tokens: 0.02
 whisper_price_per_1_min: 0.006
 
 prefix: "Игнат"
+prefix_en: "Ignat"
 allow_private: false
 rate_api_key: ""
 herbal_id: 

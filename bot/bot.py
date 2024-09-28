@@ -150,6 +150,9 @@ async def is_bot_mentioned(update: Update, context: CallbackContext):
          if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()}"):
              return True
 
+         if message.text is not None and message.text.lower().startswith(f"{config.prefix_en.lower()}"):
+             return True
+
          if message.reply_to_message is not None:
              if message.reply_to_message.from_user.id == context.bot.id:
                  return True
@@ -364,37 +367,8 @@ async def unsupport_message_handle(update: Update, context: CallbackContext, mes
     #await update.message.reply_text(error_text)
     return
 
-async def process_who(update: Update, context: CallbackContext):
-    match = re.search(r'@(\S+)', update.message.text.lower())
-    if match:
-        user = match.group(0)
-        noun = random.choice(NOUNS)
-        adjective = random.choice(ADJECTIVES)
-
-        await update.message.reply_text(
-            f"{user} {noun} {adjective}",
-            parse_mode='HTML'
-        )
-
-async def ban_user(update: Update, context: CallbackContext):
-    if is_admin(update.message.from_user.id):  
-        if update.message.reply_to_message:  
-            user_id = update.message.reply_to_message.from_user.id  
-            try:
-                await context.bot.ban_chat_member(update.message.chat.id, user_id)  
-                await update.message.reply_text(f"<b>📛 {user_id} был нахуй кикнут.</b>", parse_mode='HTML')  
-            except Exception as e:
-                await update.message.reply_text("<b>📛 Ты бля либо админа банишь, либо бота, либо я не ебу, но кикнуть его я не могу.</b>", parse_mode='HTML')
-                logging.error(f"Ошибка бана пользователя: {e}")
-        else:
-            await update.message.reply_text("<b>📛 Сука, на сообщение юзера ответь чтобы забанить.</b>", parse_mode='HTML')
-    else:
-        await update.message.reply_text("<b>📛 Ебанат, ты не админ.</b>", parse_mode='HTML')
 
 async def message_handle(update: Update, context: CallbackContext, message=None, use_new_dialog_timeout=True):
-    global GOD
-    global BIK
-    global KLUKVA
 
     if update.message.text is None:
         return
@@ -402,36 +376,6 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     for herb in HERBAL:
         if update.message.text is not None and herb in update.message.text.lower():
             await notify_herbal(update, context)
-
-    if update.message.text is not None and "клюкв" in update.message.text.lower():
-        if KLUKVA and BIK:
-            bad_adjective = random.choice(BAD_ADJECTIVES)
-            await update.message.reply_text(
-                f"клюква {bad_adjective}",
-                parse_mode=ParseMode.HTML
-            )
-
-    if update.message.text is not None and "пошел нахуй" in update.message.text.lower():
-        if BIK:
-            bad_adjective = random.choice(BAD_ADJECTIVES)
-            await update.message.reply_text(
-                f"сам пошел нахуй, {bad_adjective}",
-                parse_mode=ParseMode.HTML
-            )
-    elif update.message.text is not None and "пошёл нахуй" in update.message.text.lower():
-        if BIK:
-            bad_adjective = random.choice(BAD_ADJECTIVES)
-            await update.message.reply_text(
-                f"сам пошел нахуй, {bad_adjective}",
-                parse_mode=ParseMode.HTML
-            )
-    elif update.message.text is not None and "нахуй" in update.message.text.lower():
-        if BIK:
-            bad_adjective = random.choice(BAD_ADJECTIVES)
-            await update.message.reply_text(
-                f"нахуй твоя жопа хороша, {bad_adjective}",
-                parse_mode=ParseMode.HTML
-            )
 
     # check if bot was mentioned (for group chats)
     if not await is_bot_mentioned(update, context):
@@ -460,88 +404,23 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} курс"):
         await get_tokens_rate_handle(update, context)
         return
+
+    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} rate"):
+        await get_tokens_rate_handle_en(update, context)
+        return
     
     if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} зеркала"):
         await get_webcam_mirrors(update, context)
         return
-    
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит вохвалять хербала":
-        if not is_admin(message.from_user.id):
-            return
-        if GOD:
-            await update.message.reply_text(f"<b>Как говорят пацаны - Хербала к параше</b>", parse_mode=ParseMode.HTML)
-            GOD = False
-            return
-        else:
-            await update.message.reply_text(f"<b>Это чмо только его мамаша восхвалять может и то если он из дома</b>", parse_mode=ParseMode.HTML)
-            return
-    
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} вохвалять хербала":
-        if not is_admin(message.from_user.id):
-            return
-        if not GOD:
-            await update.message.reply_text(f"<b>Все в линейку построились и Хребалу сосать начали</b>", parse_mode=ParseMode.HTML)
-            GOD = True
-            return
-        else:
-            await update.message.reply_text(f"<b>Уровень восхваления Хербала повышен на 42%</b>", parse_mode=ParseMode.HTML)
-            return
-    
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит унижать клюкву":
-        if not is_admin(message.from_user.id):
-            return
-        if KLUKVA:
-            await update.message.reply_text(f"<b>клюква хороший клюква хороший</b>", parse_mode=ParseMode.HTML)
-            KLUKVA = False
-            return
-        else:
-            await update.message.reply_text(f"<b>Я и не хотел унижать этого мальчика</b>", parse_mode=ParseMode.HTML)
-            return
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} унижать клюкву":
-        if not is_admin(message.from_user.id):
-            return
-        if not KLUKVA:
-            await update.message.reply_text(f"<b>УНИЧТОЖИТЬ ЕБАНОГО ПИТУХА КЛЮКВУ</b>", parse_mode=ParseMode.HTML)
-            KLUKVA = True
-            return
-        else:
-            await update.message.reply_text(f"<b>Да куда его больше то? Его уже жизнь унизила</b>", parse_mode=ParseMode.HTML)
-            return
-    
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} хватит бычить":
-        if not is_admin(message.from_user.id):
-            return
-        if BIK:
-            await update.message.reply_text(f"<b>я хороший я хороший</b>", parse_mode=ParseMode.HTML)
-            BIK = False
-            return
-        else:
-            await update.message.reply_text(f"<b>Я и так хороший и не ругаюсь!</b>", parse_mode=ParseMode.HTML)
-            return
-    
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} бычить":
-        if not is_admin(message.from_user.id):
-            return
-        if not BIK:
-            await update.message.reply_text(f"<b>Твоя мама шлюха</b>", parse_mode=ParseMode.HTML)
-            BIK = True
-            return
-        else:
-            await update.message.reply_text(f"<b>Ты долбаеб? Не понятно что я и так бык?</b>", parse_mode=ParseMode.HTML)
-            return
 
-    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} нарисуй"):
-        message = message.text.replace(config.prefix.lower() + " ", "")
-        await generate_image_handle(update, context, message=message)
+    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} mirrors"):
+        await get_webcam_mirrors(update, context)
         return
-    
-    if message.text is not None and message.text.lower() == f"{config.prefix.lower()} фас":
-        await ban_user(update, context)
-        return
-    
-    if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} кто @"):
-        await process_who(update, context)
-        return
+
+   # if message.text is not None and message.text.lower().startswith(f"{config.prefix.lower()} нарисуй"):
+   #     message = message.text.replace(config.prefix.lower() + " ", "")
+   #     await generate_image_handle(update, context, message=message)
+   #     return
     
     if update.message.text is not None and update.message.text.lower() == f"{config.prefix.lower()} инфа":
         if is_admin(update.message.from_user.id):  
@@ -694,41 +573,12 @@ async def is_previous_message_not_answered_yet(update: Update, context: Callback
         return False
 
 
-def inflect_with_num(
-    number: int, forms: Tuple[LiteralString, LiteralString, LiteralString]
-) -> str:
-
-    units = number % 10
-    tens = number % 100 - units
-    if tens == 10 or units >= 5 or units == 0:
-        needed_form = 1
-    elif units > 1:
-        needed_form = 2
-    else:
-        needed_form = 0
-    return forms[needed_form]
-
-
-def process_float(number: float):
-    str_number = str(number)
-    
-    integer_part, fractional_part = str_number.split('.')
-    
-    if int(fractional_part) == 0:
-        return int(integer_part)
-    else:
-        return int(fractional_part[0])
-
-
 def rates_keyboard(dollar, euro, ruble):
     keyboard = []
 
-    dollar_word = inflect_with_num(process_float(dollar), dollar_forms)
-    ruble_word = inflect_with_num(process_float(ruble), ruble_forms)
-
-    keyboard.append([InlineKeyboardButton(f'🇺🇸 {dollar} {dollar_word}', callback_data=f"nothing")])
-    keyboard.append([InlineKeyboardButton(f'🇪🇺 {euro} евро', callback_data=f"nothing")])
-    keyboard.append([InlineKeyboardButton(f'🇷🇺 {ruble} {ruble_word}', callback_data=f"nothing")])
+    keyboard.append([InlineKeyboardButton(f'🇺🇸 {dollar} USD', callback_data=f"nothing")])
+    keyboard.append([InlineKeyboardButton(f'🇪🇺 {euro} EUR', callback_data=f"nothing")])
+    keyboard.append([InlineKeyboardButton(f'🇷🇺 {ruble} RUB', callback_data=f"nothing")])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -737,7 +587,7 @@ def rates_keyboard(dollar, euro, ruble):
 
 async def get_rate(number):
     euro_rate = 0
-    ruble_rate = 0
+    ruble_rate = 0ы
 
     dollars = int(number)/20
 
@@ -745,12 +595,12 @@ async def get_rate(number):
 
 
     if response.status_code != 200:
-        return ('<b>📛 Ошибка доступа к API</b>', rates_keyboard(dollar=0, euro=0, ruble=0))
+        return ('<b>📛 Ошибка при получении курса!</b>', rates_keyboard(dollar=0, euro=0, ruble=0))
 
     response = response.json()
 
     if 'rates' not in response:
-        return ('<b>📛 Ошибка ответа API</b>', rates_keyboard(dollar=0, euro=0, ruble=0))
+        return ('<b>📛 Ошибка при получении курса!</b>', rates_keyboard(dollar=0, euro=0, ruble=0))
 
     if 'EUR' in response['rates']:
         euro_rate = round(response['rates']['EUR'], 2)
@@ -764,9 +614,9 @@ async def get_rate(number):
 
     token_word = inflect_with_num(number, token_forms)
 
-    text = f"<b>-- 1 доллар --</b>\n<i>🇪🇺 {euro_rate} евро\n🇷🇺 {ruble_rate} {inflect_with_num(process_float(ruble_rate), ruble_forms)}</i>\n\n<b>-- 1 токен --</b><i>\n🇺🇸 0.05 доллара\n🇪🇺 {token_eur} евро\n🇷🇺 {token_rub} {inflect_with_num(process_float(token_rub), ruble_forms)}</i>\n\n"
+    text = f"<b>-- 1 доллар --</b>\n<i>🇪🇺 {euro_rate} EUR\n🇷🇺 {ruble_rate} RUB</i>\n\n<b>-- 1 токен --</b><i>\n🇺🇸 0.05 USD\n🇪🇺 {token_eur} EUR\n🇷🇺 {token_rub} RUB</i>\n\n"
 
-    rates_text = f"<b>-- {number} {token_word} --</b>"
+    rates_text = f"<b>-- {number} tks. --</b>"
 
     if number > 0:
         text = text + rates_text
@@ -781,36 +631,26 @@ async def notify_herbal(update: Update, context: CallbackContext):
         parse_mode=ParseMode.HTML
     )
 
-    if GOD:
-        herbal = random.choice(HERBAL)
-        good_adjective = random.choice(GOOD_ADJECTIVES)
-        await update.message.reply_text(
-            f"😇 ну {herbal} самый {good_adjective}"
-        )
-
 async def get_webcam_mirrors(update: Update, context: CallbackContext):
     mirrors_text = f"""
-    <b>Чатур</b>
-    herbalsomml.chaturbate.com
-    webcamangels.com
-    webmodels.live
+
+    <b>Чатурбейт / Chaturbate</b>
     camvirt.com
-    chaturbate.wang
     chaturbate.me
     ru3.camru.top
     chaturbate.global
     privatecams.com
     chaturbate.eu
 
-    <b>Бонга</b>
-    <i>Актуальное зерало всегда тут:</i>
-    zerkalorunetki.com
-
-    <b>Стрип</b>
+    <b>Бонгакамс / Bongacams</b>
     mywebcamroom.com
     ru.strip.chat
     ru.stripchat.global
     ru.superchat.live
+
+    <b>Бонгакамс / Bongacams</b>
+    <i>Актуальное зерало всегда тут:</i>
+    zerkalorunetki.com
     """
     await update.message.reply_text(mirrors_text, parse_mode=ParseMode.HTML)
 
@@ -818,6 +658,20 @@ async def get_tokens_rate_handle(update: Update, context: CallbackContext):
     text = update.message.text.lower()
     text = text.replace(config.prefix.lower() + " ", "")
     match = re.match(r'курс\s+(\d+)', text)
+
+    if match:
+        number = match.group(1)
+        rate_text, reply_markup = await get_rate(int(number))
+        await update.message.reply_text(rate_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    else:
+        rate_text, reply_markup = await get_rate(0)
+        await update.message.reply_text(rate_text, parse_mode=ParseMode.HTML)
+
+
+async def get_tokens_rate_handle(update: Update, context: CallbackContext):
+    text = update.message.text.lower()
+    text = text.replace(config.prefix.lower() + " ", "")
+    match = re.match(r'rate\s+(\d+)', text)
 
     if match:
         number = match.group(1)
@@ -845,8 +699,8 @@ async def video_note_message_handle(update: Update, context: CallbackContext):
     buf.seek(0)  # move cursor to the beginning of the buffer
 
     transcribed_text = await openai_utils.transcribe_audio(buf)
-    text = f"🎤: <i>{transcribed_text}</i>"
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+    text = f"{transcribed_text}"
+    await update.message.reply_text(f'🎤: <i>{text}</i>', parse_mode=ParseMode.HTML)
 
     # update n_transcribed_seconds
     db.set_user_attribute(user_id, "n_transcribed_seconds", video_note.duration + db.get_user_attribute(user_id, "n_transcribed_seconds"))
@@ -871,8 +725,8 @@ async def voice_message_handle(update: Update, context: CallbackContext):
     buf.seek(0)  # move cursor to the beginning of the buffer
 
     transcribed_text = await openai_utils.transcribe_audio(buf)
-    text = f"🎤: <i>{transcribed_text}</i>"
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+    text = f"{transcribed_text}"
+    await update.message.reply_text(f'🎤: <i>{text}</i>', parse_mode=ParseMode.HTML)
 
     # update n_transcribed_seconds
     db.set_user_attribute(user_id, "n_transcribed_seconds", voice.duration + db.get_user_attribute(user_id, "n_transcribed_seconds"))
@@ -1035,7 +889,7 @@ def get_settings_menu(user_id: int):
     for score_key, score_value in score_dict.items():
         text += "🟢" * score_value + "⚪️" * (5 - score_value) + f" – {score_key}\n\n"
 
-    text += "\nSelect <b>model</b>:"
+    text += "\Выбери <b>модель</b>:"
 
     # buttons to choose models
     buttons = []
@@ -1054,6 +908,8 @@ def get_settings_menu(user_id: int):
 
 def is_admin(user_id: int):
     if user_id in config.admins:
+        return True
+    if user_id in config.allowed_telegram_usernames:
         return True
     return False
 
@@ -1136,7 +992,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
 
 async def edited_message_handle(update: Update, context: CallbackContext):
     if update.edited_message.chat.type == "private":
-        text = "🥲 Unfortunately, message <b>editing</b> is not supported"
+        text = "🥲 К сожалению, я не умею работать с редактированием сообщений"
         await update.edited_message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
@@ -1171,7 +1027,7 @@ async def post_init(application: Application):
         #BotCommand("/new", "Start new dialog"),
         #BotCommand("/mode", "Select chat mode"),
        # BotCommand("/retry", "Re-generate response for previous query"),
-        BotCommand("/balance", "Баланс"),
+       # BotCommand("/balance", "Баланс"),
        # BotCommand("/settings", "Show settings"),
         BotCommand("/help", "Что я умею"),
     ])
@@ -1216,10 +1072,10 @@ def run_bot() -> None:
    # application.add_handler(CallbackQueryHandler(show_chat_modes_callback_handle, pattern="^show_chat_modes"))
    # application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
 
-    application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
-    application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
+   # application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
+   # application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
 
-    application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
+   # application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
 
     application.add_error_handler(error_handle)
 
