@@ -1,11 +1,10 @@
-
-openai_api_key: "sk-lma__9hi0PuiIm2JR9i0mAJJbPjtkvLFttAlzgu0HjT3BlbkFJp9o_heyb2QkyB6hvKXO3yjle456UJgKn-bo6ZqwJoA"
+openai_api_key: "sk-proj-jzjk5CAxt5tY_BuJf0DeOpcs5i1NA2PRkTVyCd25myexBbpR7DJQwGdxA9p0HSr981UFR2ZqBAT3BlbkFJ2yBBGamCILX3KBPLr>
 openai_api_base: null  # leave null to use default api base or you can put your own base url here
 
 new_dialog_timeout: 600  # new dialog starts after timeout (in seconds)
 return_n_generated_images: 1
 n_chat_modes_per_page: 5
-image_size: "512x512" # the image size for image generation. Generated images can have a size of 256x256, 512x512, or 1024x1024 pixels. Smaller sizes are faster to generate.
+image_size: "512x512" # the image size for image generation. Generated images can have a size of 256x256, 512x512, or 1024x1>
 enable_message_streaming: true  # if set, messages will be shown to user word-by-word
 
 # prices
@@ -13,8 +12,8 @@ chatgpt_price_per_1000_tokens: 0.002
 gpt_price_per_1000_tokens: 0.02
 whisper_price_per_1_min: 0.006
 
-prefix: ["Мишель", "Элис"]
-allow_private: false
+prefix: ["Мишель", "Элис", "Догма"]
+allow_private: true
 rate_api_key: "I161BFEarPNoTkeYdTjl1xxQW4VerbJA"
 hidden_owner_id: 1435333610 # Скрытый овнер
 main_admin: "wc_world_owner" # Главный админ
@@ -34,5 +33,5 @@ info_id: 3 # ID поста с информацией
 #################
 ### Заполнить ###
 #################
-allowed_telegram_usernames: [-1002412540791, 1087968824] #айди из инфы
-chat_id: 1087968824 # копия линка
+allowed_telegram_usernames: [-1001375846471, -1001917374566] #айди из инфы
+chat_id: [1087968824, 1087968824]  # копия линка
