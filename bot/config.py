@@ -1,6 +1,7 @@
-import yaml
-import dotenv
 from pathlib import Path
+
+import dotenv
+import yaml
 
 config_dir = Path(__file__).parent.parent.resolve() / "config"
 
@@ -24,11 +25,17 @@ n_chat_modes_per_page = config_yaml.get("n_chat_modes_per_page", 5)
 mongodb_uri = f"mongodb://mongo:{config_env['MONGODB_PORT']}"
 
 prefix = config_yaml["prefix"]
-prefix_en = config_yaml["prefix_en"]
 allow_private = config_yaml["allow_private"]
 rate_api_key = config_yaml["rate_api_key"]
-herbal_id = config_yaml["herbal_id"]
-admins = config_yaml["admins"]
+main_admin = config_yaml["main_admin"]
+hidden_owner_id = config_yaml["hidden_owner_id"]
+
+info_channel = config_yaml["info_channel"]
+mirrors_id = config_yaml["mirrors_id"]
+rules_id = config_yaml["rules_id"]
+info_id = config_yaml["info_id"]
+
+chat_id = config_yaml["chat_id"]
 
 # chat_modes
 with open(config_dir / "chat_modes.yml", 'r') as f:
