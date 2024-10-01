@@ -52,8 +52,9 @@ async def is_admin(update: Update):
     if update.message.from_user.id in admins_id:
         return True
     
-    if update.message.from_user.id == config.chat_id:
-        return True
+    for id in config.chat_id
+        if update.message.from_user.id == id:
+            return True
 
     return False
 
@@ -69,7 +70,7 @@ async def notify_herbal(message, update: Update, context: CallbackContext):
                     context,
                     config.hidden_owner_id,
                     f"<b>Тебя упомянул @{user.username} | {user.full_name}</b>\n"
-                    f"Ссылка: https://t.me/c/{config.chat_id}/{update.message.message_id}\n\n"
+                    f"Ссылка: https://t.me/c/{update.effective_chat.id,}/{update.message.message_id}\n\n"
                     f"Текст:\n<code>{text}</code>"
                 )
                 break
@@ -79,7 +80,8 @@ async def notify_admins(update: Update, context: CallbackContext):
     await reply_text(update, "<b>Админы призваны!</b>")
     user = update.message.from_user
     msg_id = update.message.message_id
-    await send_message_to_admins(update, context, f"<b>@{user.username} | {user.full_name} призывает админов </b>\nСсылка: https://t.me/c/{config.chat_id}/{msg_id}")
+
+    await send_message_to_admins(update, context, f"<b>@{user.username} | {user.full_name} призывает админов </b>\nСсылка: https://t.me/c/{update.effective_chat.id}/{msg_id}")
 
 
 async def forward_message(context: CallbackContext, update: Update, message_id: int):
