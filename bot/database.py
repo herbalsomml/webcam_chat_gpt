@@ -1,8 +1,8 @@
-from typing import Optional, Any
-
-import pymongo
 import uuid
 from datetime import datetime
+from typing import Any, Optional
+
+import pymongo
 
 import config
 
