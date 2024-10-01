@@ -1,7 +1,7 @@
-telegram_token: ""
-openai_api_key: ""
+
+openai_api_key: 
 openai_api_base: null  # leave null to use default api base or you can put your own base url here
-allowed_telegram_usernames: []  # if empty, the bot is available to anyone. pass a username string to allow it and/or user ids as positive integers and/or channel ids as negative integers
+
 new_dialog_timeout: 600  # new dialog starts after timeout (in seconds)
 return_n_generated_images: 1
 n_chat_modes_per_page: 5
@@ -13,9 +13,21 @@ chatgpt_price_per_1000_tokens: 0.002
 gpt_price_per_1000_tokens: 0.02
 whisper_price_per_1_min: 0.006
 
-prefix: "Игнат"
-prefix_en: "Ignat"
+prefix: []
 allow_private: false
-rate_api_key: ""
-herbal_id: 
-admins: []
+rate_api_key: 
+hidden_owner_id:  # Скрытый овнер
+main_admin:  # Главный админ
+
+
+##############
+### Готово ###
+##############
+telegram_token: 
+info_channel: # информационный канал
+mirrors_id:  # ID поста с зеркалами
+rules_id:  # ID поста с правилами
+info_id:  # ID поста с информацией
+
+allowed_telegram_usernames: [] #айди из инфы
+chat_id:  # копия линка
