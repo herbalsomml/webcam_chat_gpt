@@ -7,14 +7,46 @@ from telegram.constants import ParseMode
 import config
 from utils import reply_text
 
+RATE_API_URL = "https://chaturbate-tokens.com/api/rate/"
+def get_rate():
+    try:
+        response = requests.get(RATE_API_URL)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("rate_25"), data.get("rate_50"), data.get("rate_100"), data.get("rate_250"), data.get("rate_500")
+    except Exception as e:
+        return 0, 0, 0, 0, 0
 
-def create_rates_keyboard(dollar, euro, ruble):
-    keyboard = [
-        [InlineKeyboardButton(f'🇺🇸 {dollar} USD', callback_data="nothing")],
-        [InlineKeyboardButton(f'🇪🇺 {euro} EUR', callback_data="nothing")],
-        [InlineKeyboardButton(f'🇷🇺 {ruble} RUB', callback_data="nothing")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
+
+def calculate_rates() -> dict:
+    r25, r50, r100, r250, r500 = get_rate()
+    return {
+        25: r25,
+        50: r50,
+        100: r100,
+        250: r250,
+        500: r500,
+    }
+
+
+def get_rate_for_amount(rates: dict, amount: float) -> float:
+    for threshold in sorted(rates.keys(), reverse=True):
+        if amount >= threshold:
+            return rates[threshold]
+    return rates[max(rates.keys())]
+
+def create_rates_keyboard(rates, rubles, small=False):
+    if rubles > 0 and not small:
+        keyboard = [
+            [InlineKeyboardButton(f'🇷🇺 {rubles} RUB', url="https://t.me/wc_world_owner")]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+    elif small:
+        keyboard = [
+            [InlineKeyboardButton(f'от {rates[25]} до {rates[500]} RUB', url="https://t.me/wc_world_owner")]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+    
 
 
 async def fetch_rates():
@@ -37,15 +69,26 @@ async def calculate_rate(number):
     token_rub = round(0.05 * ruble_rate, 2)
     token_eur = round(0.05 * euro_rate, 4)
 
+    our_text = f'\n\n<b><a href="https://t.me/wc_world_owner">🔥 ВЕБКАМ WORLD</a> выведет на карту:</b>'
+    rates = calculate_rates()
+    exchange_rate = get_rate_for_amount(rates, dollar_value)
+    rubles = int(dollar_value * exchange_rate)
+
+    keyboard = create_rates_keyboard(rates, rubles)
+    if dollar_value < 25:
+        our_text = f'\n\n<b>🔥 Курс обменника <a href="https://t.me/wc_world_owner">ВЕБКАМ WORLD:</a></b>'
+        keyboard = create_rates_keyboard(rates, rubles, small=True)
+        
     text = (
         f"<b>-- 1 USD --</b>\n<i>🇪🇺 {euro_rate} EUR\n🇷🇺 {ruble_rate} RUB</i>\n\n"
-        f"<b>-- 1 TOKEN --</b>\n<i>🇺🇸 0.05 USD\n🇪🇺 {token_eur} EUR\n🇷🇺 {token_rub} RUB</i>\n\n"
+        f"<b>-- 1 TOKEN --</b>\n<i>🇺🇸 0.05 USD\n🇪🇺 {token_eur} EUR\n🇷🇺 {token_rub} RUB</i>"
     )
 
     if number > 0:
-        text += f"<b>-- {number} TK. --</b>"
+        text += f"\n\n<b>-- {number} TK. --</b>\n🇺🇸 {dollar_value} USD\n🇪🇺 {round(dollar_value * euro_rate, 2)} EUR\n🇷🇺 {round(dollar_value * ruble_rate, 2)} RUB"
 
-    return text, create_rates_keyboard(dollar=dollar_value, euro=round(dollar_value * euro_rate, 2), ruble=round(dollar_value * ruble_rate, 2))
+    text = text + our_text
+    return text, keyboard
 
 
 async def token_rate_handle(update: Update, context: CallbackContext):
@@ -62,4 +105,4 @@ async def token_rate_handle(update: Update, context: CallbackContext):
         number = 0
 
     rate_text, reply_markup = await calculate_rate(number)
-    await reply_text(update, rate_text, reply_markup=reply_markup if number > 0 else None)
+    await reply_text(update, rate_text, reply_markup=reply_markup)

@@ -150,6 +150,7 @@ async def get_top_10_models():
     for model in models:
         titul, username, link, views, online = model
         text += f"<b><a href='{link}'>{titul} {username}</a></b> - 👥 {views} | 🕒 {round(online/60, 1)} мин.\n"
+    
 
     return text
 

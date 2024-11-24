@@ -39,7 +39,7 @@ async def send_message_to_admins(update: Update, context: CallbackContext, text:
 
 
 async def reply_text(update: Update, text: str, reply_markup=None):
-    return await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    return await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup, disable_web_page_preview=True)
 
 
 async def is_admin(update: Update):
@@ -52,7 +52,7 @@ async def is_admin(update: Update):
     if update.message.from_user.id in admins_id:
         return True
     
-    for id in config.chat_id
+    for id in config.chat_id:
         if update.message.from_user.id == id:
             return True
 
